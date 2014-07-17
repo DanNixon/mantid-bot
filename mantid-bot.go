@@ -4,15 +4,13 @@ import (
 	"code.google.com/p/go.net/html"
 	"fmt"
 	"github.com/thoj/go-ircevent"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"regexp"
-	"strings"
 )
 
 var (
-	server = "irc.freenode.net:6667"
+	server   = "irc.freenode.net:6667"
 	roomName = "#mantid-talk"
 	tracURL  = "http://trac.mantidproject.org/mantid/ticket/"
 
