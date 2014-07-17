@@ -19,7 +19,7 @@ var (
 
 	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
-	buildJobMatcher     = regexp.MustCompile(`!(.*?) `)
+	buildJobMatcher     = regexp.MustCompile(`!(.+?)\b`)
 
 	con = irc.IRC("mantid-bot", "mantid-bot")
 )
@@ -64,16 +64,9 @@ func handleMessage(e *irc.Event) {
 		}
 	}
 
-	fmt.Println(buildJob)
-
 	if buildJob != "" {
 		jobName := buildJob[1:]
-
-		fmt.Println(jobName)
-
 		jobResult := getBuildStatus(jobName)
-
-		fmt.Println(jobResult)
 
 		if jobResult != "" {
 			con.Privmsg(roomName, fmt.Sprintf("Build job %s is %s", jobName, jobResult))
@@ -153,23 +146,23 @@ func getBuildStatus(build string) string {
 	}
 
 	type Job struct {
-		name, url, color string
+		Name  string `json:"name"`
+		Url   string `json:"url"`
+		Color string `json:"color"`
 	}
 
 	type BuildServer struct {
-		nodeDescription string
-		jobs            []Job
+		NodeDescription string `json:"nodeDescription"`
+		Jobs            []Job  `json:"jobs"`
 	}
 
-	res := &BuildServer{}
+	var res BuildServer
 	decoder := json.NewDecoder(r.Body)
 	decoder.Decode(&res)
 
-	fmt.Println(res)
-
-	for _, job := range res.jobs {
-		if job.name == build {
-			return job.color
+	for _, job := range res.Jobs {
+		if job.Name == build {
+			return job.Color
 		}
 	}
 
