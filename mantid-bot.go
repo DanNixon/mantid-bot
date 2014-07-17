@@ -17,6 +17,15 @@ var (
 	tracURL    = "http://trac.mantidproject.org/mantid/ticket/"
 	jenkinsAPI = "http://builds.mantidproject.org/api/json"
 
+	jenkinsStatus = map[string]string{
+		"red":          "failed",
+		"red_anime":    "failed (in progress)",
+		"yellow":       "built with warnings",
+		"yellow_anime": "built with warnings (in progress)",
+		"blue":         "passed",
+		"blue_anime":   "passed (in progress)",
+	}
+
 	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
 	buildJobMatcher     = regexp.MustCompile(`!(.+?)\b`)
@@ -69,7 +78,7 @@ func handleMessage(e *irc.Event) {
 		jobResult := getBuildStatus(jobName)
 
 		if jobResult != "" {
-			con.Privmsg(roomName, fmt.Sprintf("Build job %s is %s", jobName, jobResult))
+			con.Privmsg(roomName, fmt.Sprintf("Build job %s has %s", jobName, jobResult))
 		}
 	}
 }
@@ -162,7 +171,7 @@ func getBuildStatus(build string) string {
 
 	for _, job := range res.Jobs {
 		if job.Name == build {
-			return job.Color
+			return jenkinsStatus[job.Color]
 		}
 	}
 
