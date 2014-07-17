@@ -66,12 +66,7 @@ func getTicketInfo(url string) (string, string) {
 		return "", ""
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return "", ""
-	}
-
-	doc, err := html.Parse(strings.NewReader(string(body)))
+	doc, err := html.Parse(r.Body)
 	if err != nil {
 		return "", ""
 	}
