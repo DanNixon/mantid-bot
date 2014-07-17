@@ -8,14 +8,18 @@ import (
 	"net/http"
 	"regexp"
 	"strings"
+  "encoding/json"
 )
 
 var (
-	roomName = "#mantid-talk"
-	tracURL  = "http://trac.mantidproject.org/mantid/ticket/"
+	roomName    = "#mantid-talk"
+
+	tracURL     = "http://trac.mantidproject.org/mantid/ticket/"
+  jenkinsAPI  = "http://builds.mantidproject.org/api/json"
 
 	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
+	buildJobMatcher     = regexp.MustCompile(`!(.*?) `)
 
 	con = irc.IRC("mantid-bot", "mantid-bot")
 )
@@ -43,6 +47,9 @@ func handleMessage(e *irc.Event) {
 	//Try to extract a Trac ticket number from message
 	ticketString := ticketNumberMatcher.FindString(e.Message())
 
+  //Try to extract a build job
+  buildJob := buildJobMatcher.FindString(e.Message())
+
 	//Got a message with a Trac ticket
 	if ticketString != "" {
 		ticketURL := tracURL + ticketString[1:]
@@ -56,6 +63,22 @@ func handleMessage(e *irc.Event) {
 				"There are over 9000 tickets, but %s is not one of them", ticketString))
 		}
 	}
+
+  fmt.Println(buildJob)
+
+  if buildJob != "" {
+    jobName := buildJob[1:len(buildJob)-1]
+
+    fmt.Println(jobName)
+
+    jobResult := getBuildStatus(jobName);
+
+    fmt.Println(jobResult)
+
+    if jobResult != "" {
+      con.Privmsg(roomName, fmt.Sprintf("Build job %s is %s", jobName, jobResult))
+    }
+  }
 }
 
 func getTicketInfo(url string) (string, string) {
@@ -121,4 +144,38 @@ func htmlFindStatus(n *html.Node) string {
 	}
 
 	return ""
+}
+
+func getBuildStatus(build string) string {
+	r, err := http.Get(jenkinsAPI)
+	if err != nil {
+		return ""
+	}
+
+	body, err := ioutil.ReadAll(r.Body)
+	if err != nil {
+		return ""
+	}
+
+  type Job struct {
+    name, url, color string
+  }
+
+  type BuildServer struct {
+    nodeDescription string
+    jobs []Job
+  }
+
+  res := &BuildServer{}
+  json.Unmarshal(body, &res)
+
+  fmt.Println(res)
+
+  for _,job := range res.jobs {
+    if job.name == build {
+      return job.color
+    }
+  }
+
+  return ""
 }
