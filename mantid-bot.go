@@ -5,12 +5,14 @@ import (
 	"fmt"
 	"github.com/thoj/go-ircevent"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"regexp"
 	"strings"
 )
 
 var (
+	server = "irc.freenode.net:6667"
 	roomName = "#mantid-talk"
 	tracURL  = "http://trac.mantidproject.org/mantid/ticket/"
 
@@ -21,14 +23,14 @@ var (
 )
 
 func main() {
-	//Connect to Freenode
-	err := con.Connect("irc.freenode.net:6667")
+	log.Printf("Connecting to %s\n", server)
+
+	err := con.Connect(server)
 	if err != nil {
-		fmt.Println("Failed connecting")
-		return
+		log.Fatal(err)
 	}
 
-	//Join channel
+	log.Printf("Joining %s\n", roomName)
 	con.AddCallback("001", func(e *irc.Event) {
 		con.Join(roomName)
 	})
