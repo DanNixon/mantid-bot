@@ -2,20 +2,20 @@ package main
 
 import (
 	"code.google.com/p/go.net/html"
+	"encoding/json"
 	"fmt"
 	"github.com/thoj/go-ircevent"
 	"io/ioutil"
 	"net/http"
 	"regexp"
 	"strings"
-  "encoding/json"
 )
 
 var (
-	roomName    = "#mantid-talk"
+	roomName = "#mantid-talk"
 
-	tracURL     = "http://trac.mantidproject.org/mantid/ticket/"
-  jenkinsAPI  = "http://builds.mantidproject.org/api/json"
+	tracURL    = "http://trac.mantidproject.org/mantid/ticket/"
+	jenkinsAPI = "http://builds.mantidproject.org/api/json"
 
 	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
@@ -47,8 +47,8 @@ func handleMessage(e *irc.Event) {
 	//Try to extract a Trac ticket number from message
 	ticketString := ticketNumberMatcher.FindString(e.Message())
 
-  //Try to extract a build job
-  buildJob := buildJobMatcher.FindString(e.Message())
+	//Try to extract a build job
+	buildJob := buildJobMatcher.FindString(e.Message())
 
 	//Got a message with a Trac ticket
 	if ticketString != "" {
@@ -64,21 +64,21 @@ func handleMessage(e *irc.Event) {
 		}
 	}
 
-  fmt.Println(buildJob)
+	fmt.Println(buildJob)
 
-  if buildJob != "" {
-    jobName := buildJob[1:len(buildJob)-1]
+	if buildJob != "" {
+		jobName := buildJob[1:]
 
-    fmt.Println(jobName)
+		fmt.Println(jobName)
 
-    jobResult := getBuildStatus(jobName);
+		jobResult := getBuildStatus(jobName)
 
-    fmt.Println(jobResult)
+		fmt.Println(jobResult)
 
-    if jobResult != "" {
-      con.Privmsg(roomName, fmt.Sprintf("Build job %s is %s", jobName, jobResult))
-    }
-  }
+		if jobResult != "" {
+			con.Privmsg(roomName, fmt.Sprintf("Build job %s is %s", jobName, jobResult))
+		}
+	}
 }
 
 func getTicketInfo(url string) (string, string) {
@@ -152,30 +152,26 @@ func getBuildStatus(build string) string {
 		return ""
 	}
 
-	body, err := ioutil.ReadAll(r.Body)
-	if err != nil {
-		return ""
+	type Job struct {
+		name, url, color string
 	}
 
-  type Job struct {
-    name, url, color string
-  }
+	type BuildServer struct {
+		nodeDescription string
+		jobs            []Job
+	}
 
-  type BuildServer struct {
-    nodeDescription string
-    jobs []Job
-  }
+	res := &BuildServer{}
+	decoder := json.NewDecoder(r.Body)
+	decoder.Decode(&res)
 
-  res := &BuildServer{}
-  json.Unmarshal(body, &res)
+	fmt.Println(res)
 
-  fmt.Println(res)
+	for _, job := range res.jobs {
+		if job.name == build {
+			return job.color
+		}
+	}
 
-  for _,job := range res.jobs {
-    if job.name == build {
-      return job.color
-    }
-  }
-
-  return ""
+	return ""
 }
