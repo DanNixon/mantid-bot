@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"code.google.com/p/go.net/html"
 	"encoding/json"
 	"fmt"
@@ -8,7 +9,6 @@ import (
 	"log"
 	"net/http"
 	"regexp"
-  "bytes"
 )
 
 var (
@@ -86,18 +86,18 @@ func handleMessage(e *irc.Event) {
 		}
 	}
 
-  if allJobsQueryMatcher.MatchString(e.Message()) {
-    jobs := getAllBuildJobs()
-    var jobsBuffer bytes.Buffer
+	if allJobsQueryMatcher.MatchString(e.Message()) {
+		jobs := getAllBuildJobs()
+		var jobsBuffer bytes.Buffer
 
-    for _, job := range jobs {
-      jobsBuffer.WriteString(job.Name)
-      jobsBuffer.WriteString(" ")
-    }
+		for _, job := range jobs {
+			jobsBuffer.WriteString(job.Name)
+			jobsBuffer.WriteString(" ")
+		}
 
-    con.Privmsg(roomName, fmt.Sprintf("All build server jobs: %s", jobsBuffer.String()))
-    return;
-  }
+		con.Privmsg(roomName, fmt.Sprintf("All build server jobs: %s", jobsBuffer.String()))
+		return
+	}
 
 	if buildJob != "" {
 		jobName := buildJob[1:]
@@ -107,7 +107,7 @@ func handleMessage(e *irc.Event) {
 			con.Privmsg(roomName, fmt.Sprintf("Build job %s has %s", jobName, jobResult))
 		} else {
 			con.Privmsg(roomName, fmt.Sprintf("This is not the build job you are looking for (%s)", jobName))
-    }
+		}
 	}
 }
 
@@ -172,7 +172,7 @@ func htmlFindStatus(n *html.Node) string {
 }
 
 func getBuildStatus(build string) string {
-  jobs := getAllBuildJobs();
+	jobs := getAllBuildJobs()
 
 	for _, job := range jobs {
 		if job.Name == build {
@@ -184,7 +184,7 @@ func getBuildStatus(build string) string {
 }
 
 func getAllBuildJobs() []Job {
-  log.Printf("Getting all Jenkins jobs from ", jenkinsAPI)
+	log.Printf("Getting all Jenkins jobs from ", jenkinsAPI)
 
 	r, err := http.Get(jenkinsAPI)
 	if err != nil {
@@ -195,5 +195,5 @@ func getAllBuildJobs() []Job {
 	decoder := json.NewDecoder(r.Body)
 	decoder.Decode(&res)
 
-  return res.Jobs
+	return res.Jobs
 }
