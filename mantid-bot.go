@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"regexp"
+  "bytes"
 )
 
 var (
@@ -29,9 +30,21 @@ var (
 	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
 	buildJobMatcher     = regexp.MustCompile(`!(.+?)\b`)
+	allJobsQueryMatcher = regexp.MustCompile(`!builds\b`)
 
 	con = irc.IRC("mantid-bot", "mantid-bot")
 )
+
+type Job struct {
+	Name  string `json:"name"`
+	Url   string `json:"url"`
+	Color string `json:"color"`
+}
+
+type BuildServer struct {
+	NodeDescription string `json:"nodeDescription"`
+	Jobs            []Job  `json:"jobs"`
+}
 
 func main() {
 	log.Printf("Connecting to %s\n", server)
@@ -73,13 +86,28 @@ func handleMessage(e *irc.Event) {
 		}
 	}
 
+  if allJobsQueryMatcher.MatchString(e.Message()) {
+    jobs := getAllBuildJobs()
+    var jobsBuffer bytes.Buffer
+
+    for _, job := range jobs {
+      jobsBuffer.WriteString(job.Name)
+      jobsBuffer.WriteString(" ")
+    }
+
+    con.Privmsg(roomName, fmt.Sprintf("All build server jobs: %s", jobsBuffer.String()))
+    return;
+  }
+
 	if buildJob != "" {
 		jobName := buildJob[1:]
 		jobResult := getBuildStatus(jobName)
 
 		if jobResult != "" {
 			con.Privmsg(roomName, fmt.Sprintf("Build job %s has %s", jobName, jobResult))
-		}
+		} else {
+			con.Privmsg(roomName, fmt.Sprintf("This is not the build job you are looking for (%s)", jobName))
+    }
 	}
 }
 
@@ -144,31 +172,28 @@ func htmlFindStatus(n *html.Node) string {
 }
 
 func getBuildStatus(build string) string {
-	r, err := http.Get(jenkinsAPI)
-	if err != nil {
-		return ""
-	}
+  jobs := getAllBuildJobs();
 
-	type Job struct {
-		Name  string `json:"name"`
-		Url   string `json:"url"`
-		Color string `json:"color"`
-	}
-
-	type BuildServer struct {
-		NodeDescription string `json:"nodeDescription"`
-		Jobs            []Job  `json:"jobs"`
-	}
-
-	var res BuildServer
-	decoder := json.NewDecoder(r.Body)
-	decoder.Decode(&res)
-
-	for _, job := range res.Jobs {
+	for _, job := range jobs {
 		if job.Name == build {
 			return jenkinsStatus[job.Color]
 		}
 	}
 
 	return ""
+}
+
+func getAllBuildJobs() []Job {
+  log.Printf("Getting all Jenkins jobs from ", jenkinsAPI)
+
+	r, err := http.Get(jenkinsAPI)
+	if err != nil {
+		return nil
+	}
+
+	var res BuildServer
+	decoder := json.NewDecoder(r.Body)
+	decoder.Decode(&res)
+
+  return res.Jobs
 }
