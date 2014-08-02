@@ -27,7 +27,7 @@ var (
 		"blue_anime":   "passed (in progress)",
 	}
 
-	ticketNumberMatcher = regexp.MustCompile(`#\d{4}`)
+	ticketNumberMatcher = regexp.MustCompile(`#\d{4,5}`)
 	ticketTitleMatcher  = regexp.MustCompile(`\((.*?)\)`)
 	buildJobMatcher     = regexp.MustCompile(`!(.+?)\b`)
 	allJobsQueryMatcher = regexp.MustCompile(`!builds\b`)
